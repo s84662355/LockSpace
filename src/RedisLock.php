@@ -27,11 +27,9 @@ script;
     return redis.call('DEL',key) 
 script;
 
-
-
 	public function __construct(  $redisClient )
 	{
-        $this->redisClient =  $redisClient ;
+            $this->redisClient =  $redisClient ;
 	}
 
 	public function lock( $key,$expire,$wait = 0)
@@ -43,8 +41,8 @@ script;
          	while($wait>0){
 		         $res = $this->eval( $script_Arr );
 		         if($res>0) return $res;
-                 $wait -- ;
-                 sleep(1);
+                         $wait -- ;
+                         sleep(1);
          	}
            }
            return $res;
