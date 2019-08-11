@@ -36,33 +36,28 @@ script;
 
 	public function lock( $key,$expire,$wait = 0)
 	{
-         $res = Redis::executeRaw(array(
-           'EVAL', $this->script, 1, $key, $expire
-         ));
-
-         if($res == 0)
-         {
+	   $script_Arr = array('EVAL', $this->script, 1, $key, $expire);
+           $res = $this->eval( $script_Arr );
+           if($res == 0)
+           {
          	while($wait>0){
-		         $res = $this->redisClient->executeRaw(array(
-		           'EVAL', $this->script, 1, $key, $expire
-		         ));
+		         $res = $this->eval( $script_Arr );
 		         if($res>0) return $res;
                  $wait -- ;
                  sleep(1);
          	}
-         }
-
-         return $res;
+           }
+           return $res;
 	}
 
 
-    private function unlock($key )
-    {
-        $res = $this->redisClient->executeRaw(array(
-            'EVAL', $this->unlock_script, 1, $key
-        ));
-
-        return $res;
-    }
-
+	public function unlock($ke)
+	{
+	    return $this->eval( array('EVAL', $this->unlock_script, 1, $key) );
+	}
+	
+	private function eval(array $script_Arr)
+	{
+	    return $this->redisClient->executeRaw($script_Arr);
+	}
 }
