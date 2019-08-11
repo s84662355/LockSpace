@@ -49,7 +49,7 @@ script;
 	}
 
 
-	public function unlock($ke)
+	public function unlock($key)
 	{
 	    return $this->eval( array('EVAL', $this->unlock_script, 1, $key) );
 	}
