@@ -16,6 +16,11 @@ class LockServiceProvider  extends ServiceProvider
         $this->app->singleton('RedisLock', function ($app) {
         	return new RedisLock($app->make('redis'));
         });
+
+
+        $this->app->singleton('RateLimiter', function ($app) {
+            return new RedisRateLimiter($app->make('redis'));
+        });
     }
 
     /**
