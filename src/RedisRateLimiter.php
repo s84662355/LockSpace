@@ -6,12 +6,14 @@ class RedisRateLimiter{
 	private  $redisClient = null;
 
     private    $lua = <<<LUA
+    redis.replicate_commands()
         local sKey = KEYS[1];
         local nKey = KEYS[2];
-        local now = tonumber(ARGV[1]);
-        local rate = tonumber(ARGV[2]);
-        local max = tonumber(ARGV[3]);
-        local default = tonumber(ARGV[4]);
+        local a=redis.call('TIME') 
+        local now = tonumber( a[1] )
+        local rate = tonumber(ARGV[1]);
+        local max = tonumber(ARGV[2]);
+        local default = tonumber(ARGV[3]);
         
         local sNum = redis.call('get', sKey);
         if((not sNum) or sNum == nil)
@@ -48,6 +50,7 @@ class RedisRateLimiter{
         redis.call('set', nKey, now);
         
         return isPermited;
+        
 LUA;
 
 
@@ -56,19 +59,13 @@ LUA;
         $this->redisClient =  $redisClient ;
 	}
 
-
-    /**
-     * @param array $config
-     *
-     * @return bool
-     * @throws RedisException
-     */
-    public function getTicket(array $config): bool
+ 
+    public function getTicket(array $config)
     {
-        $name = $config['name'];
+        $name =__CLASS__;
         $key  = $config['key'];
 
-        $now  = time();
+
         $sKey = $this->getStorekey($name, $key);
         $nKey = $this->getNextTimeKey($name, $key);
 
@@ -76,15 +73,12 @@ LUA;
         $max     = $config['max'];
         $default = $config['default'];
 
- 
-
         $args = [
             'EVAL',
             $this->lua,
             2,
             $sKey,
             $nKey,
-            $now,
             $rate,
             $max,
             $default,
@@ -93,26 +87,16 @@ LUA;
         $result =  $this->eval( $args );
 
        
-        return (bool)$result;
+        return  $result;
     }
 
-    /**
-     * @param string $name
-     * @param string $key
-     *
-     * @return string
-     */
+ 
     private function getNextTimeKey(string $name, string $key): string
     {
         return sprintf('%s:%s:next', $name, $key);
     }
 
-    /**
-     * @param string $name
-     * @param string $key
-     *
-     * @return string
-     */
+ 
     private function getStorekey(string $name, string $key): string
     {
         return sprintf('%s:%s:store', $name, $key);

@@ -6,6 +6,7 @@ class RedisLock{
     private  $redisClient = null;
 
     private     $script = <<<script
+    redis.replicate_commands()
     local key   = KEYS[1]  
     local expire =  ARGV[1] 
     local a=redis.call('TIME') 
