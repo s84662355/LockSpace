@@ -60,14 +60,13 @@ LUA;
 	}
 
  
-    public function getTicket(array $config)
+    public function getToken(array $config)
     {
         $name =__CLASS__;
         $key  = $config['key'];
 
-
-        $sKey = $this->getStorekey($name, $key);
-        $nKey = $this->getNextTimeKey($name, $key);
+        $sKey = sprintf('%s:%s:store', $name, $key);
+        $nKey =  sprintf('%s:%s:next', $name, $key);
 
         $rate    = $config['rate'];
         $max     = $config['max'];
@@ -85,21 +84,8 @@ LUA;
         ];
 
         $result =  $this->eval( $args );
-
        
         return  $result;
-    }
-
- 
-    private function getNextTimeKey(string $name, string $key): string
-    {
-        return sprintf('%s:%s:next', $name, $key);
-    }
-
- 
-    private function getStorekey(string $name, string $key): string
-    {
-        return sprintf('%s:%s:store', $name, $key);
     }
 
 	private function eval(array $script_Arr)
