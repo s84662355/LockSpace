@@ -14,9 +14,7 @@ $config['key'] = 'sfsdfsd';
  $config['max'] =50;
  $config['default']=10;
 
-
-
-
+ $limiter->getToken($config);
 
 
 $cli = new RedisLock($client );
