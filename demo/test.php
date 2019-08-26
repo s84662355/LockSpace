@@ -16,7 +16,7 @@ $config['key'] = 'sfsdfsd';
 
 
 
-///var_dump($limiter->getTicket($config)) ;
+
 
 
 $cli = new RedisLock($client );
