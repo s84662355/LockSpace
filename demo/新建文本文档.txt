@@ -1,0 +1,85 @@
+ local key   = KEYS[1]
+    local type =  tonumber(ARGV[1]) 
+    local data_table   = redis.call('get',key ) 
+
+    local client_name =  ARGV[2] 
+
+
+    local sadd_key = "sadd"..key
+    
+
+     
+    if  redis.call('SISMEMBER',sadd_key,client_name)  ==  0 then
+                 return 0
+    end
+
+
+
+    function string.split(input, delimiter)
+        input = tostring(input)
+        delimiter = tostring(delimiter)
+        if (delimiter=='') then return false end
+        local pos,arr = 0, {}
+        -- for each divider found
+        for st,sp in function() return string.find(input, delimiter, pos, true) end do
+            table.insert(arr, string.sub(input, pos, st - 1))
+            pos = sp + 1
+        end
+        table.insert(arr, string.sub(input, pos))
+        return arr
+    end
+
+    function  string.adecode(input)
+            input = tostring(input)
+            local arr =  string.split( input , "___")
+
+            local res = {}
+
+        for key, value in pairs( arr ) do    
+            local a =  string.split( value, "???")
+             res[a[1]] =  a[2] 
+        end  
+        return res
+
+    end
+
+
+
+    if(data_table)  then
+
+        data_table =  string.adecode(data_table )
+        data_table['type'] = tonumber(  data_table['type'] )  
+
+
+        if(    data_table['type'] == type) then
+             
+                if(type == 0) then
+
+                    data_table['share_count'] = tonumber( data_table['share_count'] )  - 1
+
+
+                    if(   data_table['share_count'] <= 0) then
+                            redis.call('DEL',sadd_key) 
+                            return redis.call('DEL',key)      
+                    else
+                      
+                        redis.call('SREM',sadd_key,client_name)  
+                        data_table  =  string.aencode(    data_table  )
+                        redis.call('set',key,  data_table)    
+
+                    end
+                    return 1
+
+                else
+                      redis.call('DEL',sadd_key) 
+                      redis.call('DEL',key)   
+                      return 1 
+                end
+              
+
+        end
+
+    
+    end
+
+    return 0

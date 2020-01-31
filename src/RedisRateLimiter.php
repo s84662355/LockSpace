@@ -14,6 +14,7 @@ class RedisRateLimiter{
         local rate = tonumber(ARGV[1]);
         local max = tonumber(ARGV[2]);
         local default = tonumber(ARGV[3]);
+        local expire = tonumber(ARGV[4]);
         
         local sNum = redis.call('get', sKey);
         if((not sNum) or sNum == nil)
@@ -48,6 +49,10 @@ class RedisRateLimiter{
         
         redis.call('set', sKey, sNum);
         redis.call('set', nKey, now);
+
+        redis.call('Expire',sKey,expire) 
+
+        redis.call('Expire',nKey,expire) 
         
         return isPermited;
         
@@ -72,6 +77,8 @@ LUA;
         $max     = $config['max'];
         $default = $config['default'];
 
+        $expire = isset($config['expire']) ? intval($config['expire']): 100 ;
+
         $args = [
             'EVAL',
             $this->lua,
@@ -81,6 +88,7 @@ LUA;
             $rate,
             $max,
             $default,
+            $expire
         ];
 
         $result =  $this->eval( $args );

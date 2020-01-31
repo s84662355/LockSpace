@@ -21,4 +21,6 @@ $cli = new RedisLock($client );
 
 var_dump($cli->lock('dda',10)) ;
 
+//var_dump($cli->unlock('dda',3))  ;
+
 

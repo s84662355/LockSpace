@@ -5,6 +5,12 @@ use Illuminate\Support\ServiceProvider;
 class LockServiceProvider  extends ServiceProvider
 {
  
+    /**
+     * 是否延时加载提供器。
+     *
+     * @var bool
+     */
+    protected $defer = true;
 
     /**
      * Register the service provider.
@@ -13,13 +19,15 @@ class LockServiceProvider  extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('RedisLock', function ($app) {
-        	return new RedisLock($app->make('redis'));
+        $redis = app()->make('redis')->connection(env('LOCK_SPACE_REDIS','default'));
+         
+        $this->app->singleton('RedisLock', function ($app) use($redis){
+        	return new RedisLock($redis);
         });
 
 
-        $this->app->singleton('RateLimiter', function ($app) {
-            return new RedisRateLimiter($app->make('redis'));
+        $this->app->singleton('RateLimiter', function ($app)  use($redis){
+            return new RedisRateLimiter($redis);
         });
     }
 
@@ -30,6 +38,6 @@ class LockServiceProvider  extends ServiceProvider
      */
     public function provides()
     {
-         
+         return ['RedisLock', 'RateLimiter'];   
     }
 }
