@@ -245,7 +245,7 @@ script;
 
 	}
 
-	public function lock( $key,$expire,$type = RedisNewLock::SHARE ,$wait = 0)
+	private function lock( $key,$expire,$type = RedisNewLock::SHARE ,$wait = 0)
 	{
      
      $key = __CLASS__. $key;
