@@ -5,8 +5,6 @@ class RedisLock{
     
     private  $redisClient = null;
 
-   
-
     private $client_number ;
 
     private     $script = <<<script
@@ -118,55 +116,81 @@ script;
      
 script;
 
-	public function __construct(  $redisClient )
-	{
+  public function __construct(  $redisClient )
+  {
         $this->redisClient =  $redisClient ;
         $this->client_number = Random::str( 10 ).microtime();
         ///CLIENT SETNAME hello-world-connection
 
         //$this->redisClient->executeRaw(['CLIENT SETNAME',$this->client_number]);
-	}
+  }
 
   //wait 单位是秒
-	public function lock( $key,$expire,$wait = 0)
-	{
+  public function lock( $key,$expire,$wait = 0)
+  {
      $key = __CLASS__. $key;
     
      $wait = $wait * 1000 * 1000;
-	   $script_Arr = array('EVAL', $this->script, 1, $key, $expire);
-           $res = $this->eval( $script_Arr );
+     
+           if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+             $res = $this->redisClient->eval( $this->script,[$key,$expire,$this->client_number],1);
+           }else{
+           $script_Arr = array('EVAL', $this->script, 1, $key, $expire);
+             $res = $this->eval( $script_Arr );
+           }
+     
+     
+ 
            if($res == 0)
            {
-             	while($wait>0){
-    		         $res = $this->eval( $script_Arr );
-    		         if($res>0) {
-                       
-                      return $res;
+              while($wait>0){
+                 
+              if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+                   $res = $this->redisClient->eval( $this->script,[$key,$expire,$this->client_number],1);
+                 }else{
+                 $script_Arr = array('EVAL', $this->script, 1, $key, $expire);
+                   $res = $this->eval( $script_Arr );
                  }
+                 
+                
+                 if($res>0) {
+                         return $res;
+                      }
                    
-                             $wait  =  $wait - 1000 * 50;
-                             sleep(1000 * 50);
-             	}
+                       $wait  =  $wait - 1000 * 50;
+                       usleep(1000 * 50);
+              }
            }
 
        
            return $res;
-	}
+  }
 
 
-	public function unlock($key)
-	{
-      $key = __CLASS__. $key;
-      $res = $this->eval( array('EVAL', $this->unlock_script, 1, $key) );
+  public function unlock($key)
+  {
+        $key = __CLASS__. $key;
+         
+        
+      if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+         $res = $this->redisClient->eval( $this->unlock_script,[$key,$this->client_number],1);
+        }else{
+         
+           $res = $this->eval( array('EVAL', $this->unlock_script, 1, $key) );
+        }
+                 
+      
  
-	    return   $res;
-	}
-	
-	private function eval(array $script_Arr)
-	{
-      array_push($script_Arr,$this->client_number);
-	    return $this->redisClient->executeRaw($script_Arr);
-	}
+      return   $res;
+  }
+  
+  private function eval(array $script_Arr)
+  {
+        array_push($script_Arr,$this->client_number);
+     
+      
+      return $this->redisClient->executeRaw($script_Arr);
+  }
 
 
 }

@@ -8,9 +8,7 @@ class RedisNewLock{
     
     private  $redisClient = null;
  
-
     private  $client_number;
-
 
     private     $script = <<<script
     redis.replicate_commands()
@@ -225,74 +223,97 @@ script;
               redis.call('DEL',key)   
               return 1 
         end
-      
-
-   
-    
+     
     end
 
     return 0
 script;
 
-	public function __construct(  $redisClient )
-	{
+  public function __construct(  $redisClient )
+  {
         $this->redisClient =  $redisClient ;
 
         $this->client_number = Random::str( 10 ).microtime();
-        ///CLIENT SETNAME hello-world-connection
 
-        $this->redisClient->executeRaw(['CLIENT SETNAME',$this->client_number]);
+  }
 
-	}
-
-	private function lock( $key,$expire,$type = RedisNewLock::SHARE ,$wait = 0)
-	{
+  private function lock( $key,$expire,$type = RedisNewLock::SHARE ,$wait = 0)
+  {
      
      $key = __CLASS__. $key;
-     $wait = $wait * 1000 * 1000;;
-	   $script_Arr = array('EVAL', $this->script, 1, $key, $expire,$type);
-           $res = $this->eval( $script_Arr );
+     $wait = $wait * 1000 * 1000;
+     
+        if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+             $res = $this->redisClient->eval( $this->script,[$key,$expire,$type,$this->client_number],1);
+           }else{
+           $script_Arr = array('EVAL', $this->script, 1, $key, $expire,$type);
+             $res = $this->eval( $script_Arr );
+           }
+     
+           
            if($res == 0)
            {
-             	while($wait>0){
-    		        $res = $this->eval( $script_Arr );
-    		        if($res>0) 
-                {
-                  
-                   return $res;
-                } 
+              while($wait>0){
+
+              if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+                 $res = $this->redisClient->eval( $this->script,[$key,$expire,$type,$this->client_number],1);
+                }else{
+               $script_Arr = array('EVAL', $this->script, 1, $key, $expire,$type);
+                 $res = $this->eval( $script_Arr );
+                }
+
+
+                if($res>0) 
+                    {
+                       return $res;
+                    } 
 
                              $wait  =  $wait - 1000 * 50;
-                             sleep(1000 * 50); 
-             	}
+                             usleep(1000 * 50); 
+              }
            }
 
       
            return $res;
-	}
+  }
 
 
-	public function unlock($key )
-	{
+  public function unlock($key )
+  {
       $key = __CLASS__. $key;
-      return   $this->eval( array('EVAL', $this->unlock_script, 1, $key ) );
+      
+      if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+        
+        $res = $this->redisClient->eval( $this->unlock_script ,[$key,$this->client_number],1);
+        
+      }else{
+          
+          $res = $this->eval( array('EVAL', $this->unlock_script, 1, $key ) );
+      }
+      
+      return   $res;
     
-	}
+  }
 
   public function getUpdateLock( $key,$expire,$wait = 0)
   {
         return $this->lock( $key,$expire, RedisNewLock::UPDATE ,$wait  );
   }
-	
+  
   public function getShareLock( $key,$expire,$wait = 0)
   {
         return $this->lock( $key,$expire, RedisNewLock::SHARE ,$wait  );
   }
 
 
-	private function eval(array $script_Arr)
-	{
+  private function eval(array $script_Arr)
+  {
         array_push($script_Arr,$this->client_number);
-	    return $this->redisClient->executeRaw($script_Arr);
-	}
+        
+        if( $this->redisClient instanceof \Swoft\Redis\Pool ){
+          return $this->redisClient->rawcommand($script_Arr);
+        }
+        
+      return $this->redisClient->executeRaw($script_Arr);
+  }
 }

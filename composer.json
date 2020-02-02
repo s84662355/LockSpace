@@ -1,6 +1,6 @@
 {
     "name": "chenjiahao/suospace",
-    "description": "rabbitmq laravel",
+    "description": "redis 分布式锁",
     "license": "MIT",
     "authors": [
         {
